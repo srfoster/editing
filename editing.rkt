@@ -37,12 +37,12 @@
 (define (combine2 #:length [l 1] . cs)
   (define letters '(a b c d e f g h i))
   (define is (map (lambda (c)
-		    (~a "-i input/" c))
+		    (~a "-i " c))
 		  (drop-right cs 1)
 		  ))
   (define clips (map 
 		    (lambda (c i)
-		      (~a "[" i ":v]trim=start=0:duration=" l (if (> i 0) ",setpts=PTS-STARTPTS" "") "[clip" i "]"))
+		      (~a "[" i ":v]trim=start=0:duration=" l (if (> i 0) ",setpts=PTS-STARTPTS,drawtext=text=Hi" "") "[clip" i "]"))
 		    (drop-right cs 1)
 		    (range 0 (length is))))
 
@@ -50,17 +50,15 @@
   (define (concats ins)
     (define r (random 10000))
     (if (= 2 (length ins))
-	(list; @~a{[@(first ins)][@(second ins)]concat[out1]}
-	       (concat-filter (first ins) (second ins) 'out1))
+	(list (concat-filter (first ins) (second ins) 'out1))
 	(cons
-	  ;@~a{[@(first ins)][@(second ins)]concat[temp@r]}
 	  (concat-filter (first ins) (second ins) (~a "temp" r))
 	  (concats (cons (~a "temp" r) 
 			 (drop ins 2))))))
 
   (system
     @~a{
-    ffmpeg @(string-join is " ") -filter_complex "@(string-join clips ";");@(compile-filters (concats (map (lambda (i) (~a "clip" i)) (range 0 (length is)))))" -map [out1] input/@(last cs)
+    ffmpeg @(string-join is " ") -filter_complex "@(string-join clips ";");@(compile-filters (concats (map (lambda (i) (~a "clip" i)) (range 0 (length is)))))" -map [out1] @(last cs)
     }))
 
 (define (concat l out-file)
