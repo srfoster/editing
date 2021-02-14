@@ -1,6 +1,5 @@
 #lang reprovide
 
-editing/mass-fetch
-editing/fetch-util
-editing/fetch
-editing/editing
+editing/base
+editing/render
+editing/filter-library
