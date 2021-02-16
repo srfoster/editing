@@ -4,7 +4,9 @@
 	 url-source file-source
 	 working-directory
 	 filt-compile
-	 current-sources)
+	 current-sources
+	 show
+	 )
 
 (require editing/fetch-util)
 (require editing/base)
@@ -26,10 +28,11 @@
 	     (- (string-length path) 3)))
 
 (define (url-source 
+	  #:args [args ""]
 	  #:file-ext [file-ext #f]
 	  #:wget-params [wget-params ""]
 	  url)
-  (source ""
+  (source args
     (thunk
       (define fn (next-file-name
 		      (url->file-type url)))
@@ -130,4 +133,10 @@
       (flatten
 	(append
 	  (map filt->sources (filt-ins f))))))
+
+
+(define (show f)
+  (system 
+    @~a{xdg-open @(build-path (working-directory) f)}))
+
 

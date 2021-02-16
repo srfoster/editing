@@ -13,7 +13,8 @@
 	 hue
 	 xfade ;need ffmpeg 4.3
 	 blend
-	 )
+	 blank
+	 text)
 
 
 (require editing/base)
@@ -59,11 +60,6 @@
       (concat-2 (first ins) (second ins))
       (concat-2 (first ins) (apply concat (rest ins)))))
 
-(define (blank 
-	  dur)
-  (filt (list)
-	(~a "nullsrc=size=600x400,trim=start=0:duration=" dur)))
-
 (define (vflip i)
   (filt (list i)
 	"vflip"))
@@ -98,3 +94,20 @@
 (define (blend x y #:all-expr [all-expr ""])
   (filt (list x y)
 	@~a{blend=all_expr='@|all-expr|'}))
+
+
+(define (blank
+	  #:w [w 640]
+	  #:h [h 480])
+  (filt (list)
+	@~a{nullsrc=size=@|w|x@|h|}))
+
+
+(define (text i
+	      #:text t)
+  ;Consider using textfile=@|some-temp-file|
+  (filt 
+    (list i)
+    @~a{drawtext=text='@t':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=(h-text_h)/2}))
+
+
