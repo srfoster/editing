@@ -9,7 +9,7 @@
 
 (require json)
 
-(struct transcribed-word (start-time end-time string))
+(struct transcribed-word (start-time end-time string) #:transparent)
 
 (define (json-file->transcribed-words json-file)
   (define s (file->string json-file))
@@ -37,9 +37,12 @@
   (if (empty? to-keep)
       '()
       (let ()
-	(define current   (first to-keep))   
+	(define current   (string-downcase (first to-keep)))
 
-	(define current-i (index-of (map transcribed-word-string words) current string=?))
+	(define current-i (index-of (map (compose string-downcase transcribed-word-string) words) current string=?))
+
+        (when (not current-i)
+          (error "Word not found in transcript:" current))
 
 	(append
 	  (list (list-ref words current-i)) 
