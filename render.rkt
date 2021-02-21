@@ -1,18 +1,27 @@
 #lang at-exp racket 
 
 (provide render
+	 new-render
 	 url-source file-source
 	 working-directory
 	 filt-compile
 	 current-sources
 	 show
+	 debug?
 	 )
 
 (require editing/fetch-util)
 (require editing/base)
 
+(define debug? (make-parameter #f))
 (define working-directory (make-parameter (current-directory)))
 (define current-sources (make-parameter '()))
+(define current-mappings (make-parameter #f))
+
+(define (->path s)
+  (if (absolute-path? s)
+      s
+      (build-path (working-directory) s)))
 
 (define file-id 0)
 (define (next-file-name ext)
@@ -37,12 +46,12 @@
       (define fn (next-file-name
 		      (url->file-type url)))
 
-      (define out (build-path (working-directory) fn))
+      (define out (->path fn))
 
-      (index (build-path (working-directory) "index"))
+      (index (->path "index"))
 
       (if (get-from-index url)
-	  (build-path (working-directory) (get-from-index url))
+	  (->path (get-from-index url))
 	  (let ()
 	    (system
 	      @~a{wget @wget-params @url -O @out})
@@ -54,7 +63,7 @@
 		     path)
   (source
     args
-    (thunk (build-path (working-directory) path))))
+    (thunk (->path path))))
 
 (define (fresh-filt-var)
   (~a "[a"(random 1000)"]"))
@@ -73,7 +82,7 @@
 (define (filt-compile f)
   (define (->in x)
     (if (source? x)
-	x
+	(let () x)
 	(let ()
 	  (define fc (filt-compile x))
 	  fc)))
@@ -85,20 +94,31 @@
     (parameterize ([audio-sources (filt-audio-ins f)])
       (map get-filt-var pres)))
 
+  (define filt-var
+    (fresh-filt-var)
+    )
+
   (define parts
     (append (filter (not/c source?) pres) 
 	    (list
 	      (~a
 		(string-join ins "")
 		(filt-string f)
-		(fresh-filt-var)))))
+		filt-var))))
+
+  (when (current-mappings)
+    (hash-set! (current-mappings)
+	       f
+	       filt-var)) 
 
   (~a (string-join 
 	parts
 	";")))
 
 
-(define (render #:to to video-filt [audio-filt #f])
+(define (render 
+	  #:show? [show? #t]
+	  #:to to video-filt [audio-filt #f])
   (define sources (filt->sources video-filt))
   (define audio-sources 
     (if (not audio-filt)
@@ -123,8 +143,46 @@
 	  #f
 	  (filt-compile audio-filt))))
 
-  (system
-    @~a{ffmpeg @(string-join input-args " ") -filter_complex "@|filter-complex|@(if (not audio-filt) "" @~a{;@filter-complex-audio})" -map @(get-filt-var filter-complex) @(if (not audio-filt) "" @~a{-map @(get-filt-var filter-complex-audio)}) -shortest @(build-path (working-directory) to)}))
+  ((if (debug?) displayln system)
+    @~a{ffmpeg @(string-join input-args " ") -filter_complex "@|filter-complex|@(if (not audio-filt) "" @~a{;@filter-complex-audio})" -map @(get-filt-var filter-complex) @(if (not audio-filt) "" @~a{-map @(get-filt-var filter-complex-audio)})  @(->path to)})
+  
+  (when show?
+    (show to)))
+
+(define (new-render 
+	  the-filt
+	  #:show? [show? #t]
+	  #:to to 
+	  #:maps [output-maps (list the-filt)])
+  (define sources (filt->sources the-filt))
+
+  (define input-args (map
+		       (lambda (c)
+			 (~a (source-args c) 
+			     " -i " 
+			     ((source-thunk c))))
+		       sources))
+    
+  (define mappings (make-hash))
+
+  (define filter-complex
+    (parameterize ([current-sources sources]
+		   [current-mappings mappings])
+      (filt-compile the-filt)))
+
+  (define map-args
+    (string-join
+      (map 
+	(lambda (m) 
+	  (~a "-map " (hash-ref mappings m)))
+	output-maps)
+      " "))
+
+  ((if (debug?) displayln system)
+    @~a{ffmpeg @(string-join input-args " ") -filter_complex "@|filter-complex|"  @|map-args| @(->path to)})
+  
+  (when show?
+    (show to)))
 
 
 (define (filt->sources f)
@@ -136,7 +194,8 @@
 
 
 (define (show f)
-  (system 
-    @~a{xdg-open @(build-path (working-directory) f)}))
+  (when (not (debug?))
+    (system 
+      @~a{xdg-open @(->path f)})))
 
 

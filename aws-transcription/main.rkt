@@ -12,7 +12,7 @@
 (struct transcribed-word (start-time end-time string))
 
 (define (json-file->transcribed-words json-file)
-  (define s (file->string "e1-vo.json"))
+  (define s (file->string json-file))
 
   (define j (string->jsexpr s))
 
