@@ -132,7 +132,7 @@
 	  #:w [w 640]
 	  #:h [h 480])
   (filt (list)
-	@~a{nullsrc=size=@|w|x@|h|}))
+	@~a{color=s=@|w|x@|h|:c=0x00000000, geq=random(1)/hypot(X-cos(N*0.07)*W/2-W/2\,Y-sin(N*0.09)*H/2-H/2)^2*1000000*sin(N*0.02):128:128}))
 
 
 (define (attr n v)
