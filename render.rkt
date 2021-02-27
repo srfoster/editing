@@ -2,12 +2,14 @@
 
 (provide render
 	 new-render
-	 url-source file-source
+	 url-source file-source image-source
 	 working-directory
 	 filt-compile
 	 current-sources
 	 show
 	 debug?
+	 current-width
+	 current-height
 	 )
 
 (require editing/fetch-util)
@@ -17,6 +19,9 @@
 (define working-directory (make-parameter (current-directory)))
 (define current-sources (make-parameter '()))
 (define current-mappings (make-parameter #f))
+
+(define current-width (make-parameter #f))
+(define current-height (make-parameter #f))
 
 (define (->path s)
   (if (absolute-path? s)
@@ -64,6 +69,16 @@
   (source
     args
     (thunk (->path path))))
+
+(define (image-source #:args [args ""]
+		      image)
+  (local-require (only-in 2htdp/image save-image))
+  (source
+    (~a args " -loop 1")
+    (thunk 
+      (define f (make-temporary-file "~a.png"))
+      (save-image image f)
+      f)))
 
 (define (fresh-filt-var)
   (~a "[a"(random 1000)"]"))

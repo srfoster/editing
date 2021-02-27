@@ -2,10 +2,12 @@
 
 (provide atrim 
 	 volume
-	 adelay)
+	 adelay
+	 asetpts)
 
 (provide trim 
 	 scale
+	 rotate
 	 overlay
 	 concat
 	 new-concat
@@ -21,6 +23,9 @@
 	 setsar
 	 loop
 	 fps
+
+	 geq
+	 hue
 	 
 	 ;Combos. Probably move to different file?
 	 scale/pad
@@ -56,6 +61,9 @@
   (filt (list (->a i))
 	@~a{volume=volume=@|volume|}))
 
+(define (asetpts #:expression expr i)
+  (filt (list i)
+	@~a{asetpts=@|expr|}))
 
 ;VIDEO
 
@@ -69,9 +77,14 @@
 
 	))
 
-(define (scale/pad i #:w [w #f] #:h [h #f])
+(define (rotate i #:rotate [r 0])
   (filt (list i)
-	@~a{scale=iw*min(@|w|/iw\,@|h|/ih):ih*min(@|w|/iw\,@|h|/ih),format=rgba,pad=@|w|:@|h|:(@|w|-iw*min(@|w|/iw\,@|h|/ih))/2:(@|h|-ih*min(@|w|/iw\,@|h|/ih))/2:color=0x00000000,setsar=1:1}
+	@~a{rotate=@|r|:c=none}))
+
+(define (scale/pad i #:w [w #f] #:h [h #f]
+		   #:color [c "0x00000000"])
+  (filt (list i)
+	@~a{scale=iw*min(@|w|/iw\,@|h|/ih):ih*min(@|w|/iw\,@|h|/ih),format=rgba,pad=@|w|:@|h|:(@|w|-iw*min(@|w|/iw\,@|h|/ih))/2:(@|h|-ih*min(@|w|/iw\,@|h|/ih))/2:color=@|c|,setsar=1:1}
   ))
 
 (define (setsar i #:sar [sar "1:1"])
@@ -114,10 +127,6 @@
   (filt (list i)
 	@~a{vignette=PI/4}))
 
-(define (hue i)
-  (filt (list i)
-	@~a{hue=90}))
-
 
 (define (xfade x y)
   (filt (list x y)
@@ -130,9 +139,16 @@
 
 (define (blank
 	  #:w [w 640]
-	  #:h [h 480])
+	  #:h [h 480]
+	  #:color [c "0x00000000"]
+	  )
   (filt (list)
-	@~a{color=s=@|w|x@|h|:c=0x00000000, geq=random(1)/hypot(X-cos(N*0.07)*W/2-W/2\,Y-sin(N*0.09)*H/2-H/2)^2*1000000*sin(N*0.02):128:128}))
+	@~a{nullsrc=s=1x1,format=rgba,pad=width=@|w|:height=@|h|:color=@|c|}))
+
+(define (geq i)
+  ;Just a demo for now...
+  (filt (list i)
+    @~a{geq=random(1)/hypot(X-cos(N*0.07)*W/2-W/2\,Y-sin(N*0.09)*H/2-H/2)^2*1000000*sin(N*0.02):128:128}))
 
 
 (define (attr n v)
@@ -143,12 +159,21 @@
 	      #:enable [e #f]
 	      #:fontsize [f #f]
 	      #:fontfile [ff #f]
+	      #:fontcolor [fc "white"]
 	      #:x [x "(w-text_w)/2"]
 	      #:y [y "(h-text_h)/2"])
   ;Consider using textfile=@|some-temp-file|
+  (define temp (make-temporary-file))
+  (with-output-to-file
+    #:exists 'replace 
+    temp
+    (thunk
+      (display
+	(string-replace t
+			"%" "\\%"))))
   (filt 
     (list i)
-    @~a{drawtext=@(attr 'enable e)@(attr 'x x)@(attr 'y y)@(attr 'fontsize f)@(attr 'fontfile ff)text='@t':fontcolor=white}))
+    @~a{drawtext=@(attr 'enable e)@(attr 'x x)@(attr 'y y)@(attr 'fontsize f)@(attr 'fontfile ff)@(attr 'fontcolor fc)textfile=@temp}))
 
 
 (define (loop i #:loop l
@@ -162,3 +187,9 @@
   (filt 
     (list i)
     @~a{fps=@(attr 'fps f)}))
+
+(define (hue i #:h [h #f])
+  (filt 
+    (list i)
+    @~a{hue=@(attr 'h h)}))
+
