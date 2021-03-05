@@ -3,7 +3,10 @@
 (provide atrim 
 	 volume
 	 adelay
-	 asetpts)
+	 asetpts
+	 afade
+	 amix
+	 )
 
 (provide trim 
 	 scale
@@ -64,6 +67,24 @@
 (define (asetpts #:expression expr i)
   (filt (list i)
 	@~a{asetpts=@|expr|}))
+
+(define (afade i 
+	       #:t [t #f]
+	       #:st [st #f]
+	       #:ss [ss #f]
+	       #:d [d #f])
+  (filt 
+    (list i)
+    @~a{afade=@(attr 't t)@(attr 'st st)@(attr 'ss ss)@(attr 'd d)}))
+
+(define (amix 
+	      #:duration [d 'first]
+	      #:inputs [ins 2]
+
+	      . is )
+  (filt 
+    is
+    @~a{amix=@(attr 'inputs ins)@(attr 'duration d)}))
 
 ;VIDEO
 
